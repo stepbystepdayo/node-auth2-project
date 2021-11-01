@@ -7,7 +7,7 @@
   developers cloning this repo won't be able to run the project as is.
  */
 
-const jwtSecret = process.env.JWT_SECRET || "keepitsecret";
+const jwtSecret = process.env.JWT_SECRET || "shh";
 module.exports = {
   jwtSecret,
 };

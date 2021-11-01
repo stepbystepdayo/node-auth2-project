@@ -1,4 +1,4 @@
-const { JWT_SECRET } = require("../secrets"); // use this secret!
+const { jwtSecret } = require("../secrets"); // use this secret!
 const jwt = require("jsonwebtoken");
 const Users = require("../users/users-model");
 
@@ -19,12 +19,13 @@ const restricted = (req, res, next) => {
     Put the decoded token in the req object, to make life easier for middlewares downstream!
   */
   const token = req.headers.authorization;
+  // console.log(token);
   if (!token) {
     res.status(400).json({
       message: "Token required",
     });
   } else {
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, jwtSecret, (err, decoded) => {
       if (err) {
         res.status(401).json({
           message: "Token invalid",
@@ -48,7 +49,8 @@ const only = (role_name) => (req, res, next) => {
 
     Pull the decoded token from the req object, to avoid verifying it again!
   */
-  if (!req.decodedToken.role_name) {
+
+  if (req.decodedToken.role_name !== role_name) {
     res.status(403).json({
       message: "This is not for you",
     });
@@ -69,7 +71,7 @@ const checkUsernameExists = async (req, res, next) => {
     const rows = await Users.findBy({ username: req.body.username });
     if (rows.length) {
       req.userData = rows[0];
-      console.log("I got the right row!", req.userData);
+      // console.log("I got the right row!", req.userData);
       next();
     } else {
       res.status(401).json({
@@ -100,22 +102,34 @@ const validateRoleName = (req, res, next) => {
       "message": "Role name can not be longer than 32 chars"
     }
   */
-  const validatedName = req.body.role_name;
-  const trimmedName = validatedName.trim();
 
-  console.log("trim:", trimmedName);
-  if (validatedName) {
-    trimmedName;
-  } else if (!validatedName || trimmedName === "") {
-    req.body.role_name = "student";
-  } else if (trimmedName === "admin") {
-    res.status(422).json({
-      message: "Role name can not be admin",
-    });
-  } else if (trimmedName.length > 32) {
-    res.status(422).json({
-      message: "Role name can not be longer than 32 chars",
-    });
+  try {
+    // validatedName is the "role name"
+    const validatedName = req.body.role_name;
+    console.log("here is the validated name: ", validatedName);
+
+    if (validatedName) {
+      const trimmedName = validatedName.trim();
+      console.log("can we trim: ", trimmedName);
+      if (trimmedName === "admin") {
+        res.status(422).json({
+          message: "Role name can not be admin",
+        });
+      } else if (trimmedName.length > 32) {
+        res.status(422).json({
+          message: "Role name can not be longer than 32 chars",
+        });
+      }
+      req.body.role_name = trimmedName;
+      next();
+    } else if (!validatedName) {
+      // ahh, we DONT have a validatedName, so we need to put it to student
+      req.body.role_name = "student";
+
+      next();
+    }
+  } catch (e) {
+    res.status(500).json({ message: e.message });
   }
 };
 

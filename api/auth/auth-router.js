@@ -28,7 +28,7 @@ router.post("/register", validateRoleName, (req, res, next) => {
   // console.log("this is user.password", user.password);
   Users.add(user)
     .then((saved) => {
-      res.status(201).json({ message: `Great to have you! ${saved.username}` });
+      res.status(201).json(saved);
     })
     .catch(next);
 });
@@ -55,32 +55,35 @@ router.post("/login", checkUsernameExists, (req, res, next) => {
    */
 
   const { username, password } = req.body;
-  console.log("this is username", username);
-  console.log("this is password", password);
-  Users.findBy({ username }).then((user) => {
-    console.log("this is user:", user);
-    if (user && bcrypt.compareSync(password, user[0].password)) {
-      const token = makeToken(user[0]);
-      console.log("this is token", token);
+  // console.log("this is username", username);
+  // console.log("this is password", password);
+  // console.log("this is role_name:", role_name);
+  Users.findBy({ username }).then(([user]) => {
+    // console.log("this is user:", user);
+    if (user && bcrypt.compareSync(password, user.password)) {
+      const token = makeToken(user);
+      // console.log("this is token", token);
       res.status(200).json({
-        message: `Welcome back ${user[0].username}`,
+        message: `${user.username} is back`,
         token,
       });
     } else {
-      next({ status: 401, message: "Invalid Credentials" });
+      res.status(401).json({ message: "Invalid Credentials" });
     }
   });
 });
 
 const makeToken = (user) => {
+  const options = {
+    expiresIn: "1d",
+  };
+  // console.log(options);
   const payload = {
     subject: user.user_id,
     username: user.username,
-    role_name: user.role,
+    role_name: user.role_name,
   };
-  const options = {
-    expiresIn: "200s",
-  };
+  // console.log(payload);
   return jwt.sign(payload, jwtSecret, options);
 };
 
